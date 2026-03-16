@@ -1,7 +1,11 @@
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { AuthCtx, API } from '../App';
+import { AuthCtx } from '../App';
+
+// Uses Supabase Edge Function for login — bypasses Railway completely
+const SUPABASE_URL = 'https://gvmynnufzofwvvgwsekg.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2bXlubnVmem9md3Z2Z3dzZWtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2MDY4MjUsImV4cCI6MjA4OTE4MjgyNX0.jwLtjOqOwEfhaAgXaGX7O63VL3cVPZNpN-pbKZ1AOS8';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -14,11 +18,17 @@ export default function Login() {
   const submit = async e => {
     e.preventDefault(); setErr(''); setLoad(true);
     try {
-      const { data } = await axios.post(`${API}/api/admin/login`, { email, password: pass });
+      const { data } = await axios.post(
+        `${SUPABASE_URL}/functions/v1/admin-auth`,
+        { email, password: pass },
+        { headers: { 'apikey': SUPABASE_ANON, 'Content-Type': 'application/json' } }
+      );
+      if (data.error) throw new Error(data.error);
       login(data.admin, data.token);
       nav('/dashboard');
-    } catch (e) { setErr(e.response?.data?.error || 'Login failed.'); }
-    finally { setLoad(false); }
+    } catch (e) {
+      setErr(e.response?.data?.error || e.message || 'Login failed.');
+    } finally { setLoad(false); }
   };
 
   return (
